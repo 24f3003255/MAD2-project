@@ -72,5 +72,17 @@ def staff_participants_page(trek_id):
 def user_dashboard():
     return render_template("user_dashboard.html")
 
+@app.route("/user/treks")
+def available_treks_page():
+    return render_template("available_treks.html")
+
+@app.route("/user/bookings")
+def my_bookings_page():
+    return render_template("my_bookings.html")
+
+@app.route("/user/profile")
+def user_profile():
+    return render_template("user_profile.html")
+    
 if __name__ == "__main__":
     app.run(debug=True)

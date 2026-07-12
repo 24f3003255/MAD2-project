@@ -5,6 +5,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from decorators import role_required
 from models import Booking, User, db, Trek, StaffProfile, TrekStatistics
 from datetime import datetime
+import os
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -376,3 +377,160 @@ def complete_trek(trek_id):
         booking.booking_status = "Completed"
     db.session.commit()
     return jsonify({"message": "Trek completed successfully"}), 200
+
+@auth_bp.route("/api/user/dashboard", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def user_dashboard():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+    total_bookings = Booking.query.filter_by(user_id=user_id).count()
+    return jsonify({
+        "username": user.username,
+        "total_bookings": total_bookings
+    }), 200
+
+
+@auth_bp.route("/api/user/treks", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def get_available_treks():
+    treks = Trek.query.filter(Trek.status != "Closed").all()
+    trek_list = []
+    for trek in treks:
+        staff_name = "Not Assigned"
+        if trek.staff and trek.staff.user:
+            staff_name = trek.staff.user.username
+        trek_list.append({
+            "id": trek.id,
+            "trek_name": trek.trek_name,
+            "location": trek.location,
+            "difficulty": trek.difficulty,
+            "duration": trek.duration,
+            "available_slots": trek.available_slots,
+            "status": trek.status,
+            "staff_name": staff_name,
+            "start_date": trek.start_date.strftime("%Y-%m-%d") if trek.start_date else "",
+            "end_date": trek.end_date.strftime("%Y-%m-%d") if trek.end_date else "",
+            "description": trek.description or ""
+        })
+    return jsonify(trek_list), 200
+
+@auth_bp.route("/api/user/book/<int:trek_id>", methods=["POST"])
+@jwt_required()
+@role_required("Trekker")
+def book_trek(trek_id):
+    user_id = get_jwt_identity()
+    trek = Trek.query.get(trek_id)
+    if not trek:
+        return jsonify({"message": "Trek not found"}), 404
+    if trek.status != "Open":
+        return jsonify({"message": "Booking allowed only when trek status is Open"}), 400
+    if trek.available_slots <= 0:
+        return jsonify({"message": "No slots available for this trek"}), 400
+    existing_booking = Booking.query.filter_by(
+        user_id=user_id,
+        trek_id=trek_id
+    ).first()
+    if existing_booking:
+        return jsonify({"message": "You have already booked this trek"}), 400
+    booking = Booking(
+        user_id=user_id,
+        trek_id=trek_id,
+        booking_status="Booked",
+        payment_status="Pending"
+    )
+    db.session.add(booking)
+    trek.available_slots -= 1
+    db.session.commit()
+    return jsonify({"message": "Trek booked successfully"}), 201
+
+@auth_bp.route("/api/user/bookings", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def get_user_bookings():
+    user_id = get_jwt_identity()
+    bookings = Booking.query.filter_by(user_id=user_id).all()
+    booking_list = [
+        {
+            "booking_id": booking.id,
+            "trek_name": booking.trek.trek_name,
+            "location": booking.trek.location,
+            "difficulty": booking.trek.difficulty,
+            "booking_date": booking.booking_date.strftime("%Y-%m-%d %H:%M"),
+            "booking_status": booking.booking_status,
+            "payment_status": booking.payment_status,
+            "trek_status": booking.trek.status,
+        }
+        for booking in bookings
+    ]
+    return jsonify(booking_list), 200
+
+
+@auth_bp.route("/api/user/profile", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def get_profile():
+    user = User.query.get(get_jwt_identity())
+    return jsonify({
+        "username": user.username,
+        "email": user.email
+    })
+
+@auth_bp.route("/api/user/profile", methods=["PUT"])
+@jwt_required()
+@role_required("Trekker")
+def update_profile():
+    user = User.query.get(get_jwt_identity())
+    data = request.get_json()
+    user.username = data["username"]
+    user.email = data["email"]
+    db.session.commit()
+    return jsonify({
+        "message": "Profile updated successfully"
+    })
+
+
+@auth_bp.route("/api/user/export-history", methods=["POST"])
+@jwt_required()
+@role_required("Trekker")
+def export_history():
+    task = export_booking_history.delay(get_jwt_identity())
+    return jsonify({
+        "message": "CSV export started",
+        "task_id": task.id
+    })
+
+
+@auth_bp.route("/api/user/export-status", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def export_status():
+    filename = f"exports/history_{get_jwt_identity()}.csv"
+    if os.path.exists(filename):
+        return jsonify({
+            "status": "Completed",
+            "file": filename
+        })
+    return jsonify({
+        "status": "Processing"
+    })
+
+
+@auth_bp.route("/api/user/download-export", methods=["GET"])
+@jwt_required()
+@role_required("Trekker")
+def download_export():
+    filename = f"exports/history_{get_jwt_identity()}.csv"
+    if not os.path.exists(filename):
+        return jsonify({
+            "message": "CSV not found"
+        }), 404
+    return send_file(
+        filename,
+        as_attachment=True,
+        download_name="Trekking_History.csv",
+        mimetype="text/csv"
+    )

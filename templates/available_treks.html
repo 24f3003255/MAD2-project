@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Available Treks</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+    <nav class="navbar navbar-dark bg-dark px-3">
+        <span class="navbar-brand">Trek Management</span>
+        <div>
+            <button class="btn btn-light btn-sm me-2" @click="goToDashboard">Dashboard</button>
+            <button class="btn btn-success btn-sm me-2" @click="goToMyBookings">My Bookings</button>
+            <button class="btn btn-danger btn-sm" @click="logout">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h3>Available Treks</h3>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Search trek or location"
+                    v-model="searchQuery"
+                    @input="filterTreks">
+            </div>
+
+            <div class="col-md-4">
+                <select
+                    class="form-select"
+                    v-model="difficultyFilter"
+                    @change="filterTreks">
+                    <option value="">All Difficulties</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Maximum Duration"
+                    v-model="maxDuration"
+                    @input="filterTreks">
+            </div>
+        </div>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Trek</th>
+                    <th>Location</th>
+                    <th>Difficulty</th>
+                    <th>Duration</th>
+                    <th>Slots</th>
+                    <th>Status</th>
+                    <th>Guide</th>
+                    <th>Book</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr v-for="trek in treks" :key="trek.id">
+                    <td><span v-text="trek.id"></span></td>
+                    <td><span v-text="trek.trek_name"></span></td>
+                    <td><span v-text="trek.location"></span></td>
+                    <td><span v-text="trek.difficulty"></span></td>
+                    <td><span v-text="trek.duration"></span></td>
+                    <td><span v-text="trek.available_slots"></span></td>
+                    <td><span v-text="trek.status"></span></td>
+                    <td><span v-text="trek.staff_name"></span></td>
+                    <td>
+                        <button
+                            class="btn btn-success btn-sm"
+                            @click="bookTrek(trek.id)"
+                            :disabled="trek.available_slots <= 0 || trek.status === 'Closed'">
+                            Book
+                        </button>
+                    </td>
+                </tr>
+
+                <tr v-if="treks.length === 0">
+                    <td colspan="9" class="text-center">No treks available</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script src="/static/js/available_treks.js"></script>
+</body>
+</html>
