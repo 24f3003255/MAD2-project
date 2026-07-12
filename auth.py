@@ -276,21 +276,103 @@ def staff_dashboard():
     user = User.query.get(get_jwt_identity())
     if not user:
         return jsonify({"message": "User not found"}), 404
+    if not user.staff_profile:
+        return jsonify({"message": "Staff profile not found"}), 404
+    staff_id = user.staff_profile.id
+    treks = Trek.query.filter_by(assigned_staff_id=staff_id).all()
+    trek_ids = [trek.id for trek in treks]
+    participant_count = 0
+    if trek_ids:
+        participant_count = Booking.query.filter(Booking.trek_id.in_(trek_ids)).count()
     return jsonify({
         "staff_name": user.username,
-        "message": "Welcome Staff"
+        "assigned_treks": len(treks),
+        "registered_trekkers": participant_count
     }), 200
 
-@auth_bp.route("/api/user/dashboard", methods=["GET"])
+@auth_bp.route("/api/staff/treks", methods=["GET"])
 @jwt_required()
-@role_required("Trekker")
-def user_dashboard():
+@role_required("Staff")
+def get_staff_treks():
     user = User.query.get(get_jwt_identity())
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-    total_bookings = Booking.query.filter_by(user_id=user.id).count()
+    if not user or not user.staff_profile:
+        return jsonify([]), 200
+    staff_id = user.staff_profile.id
+    treks = Trek.query.filter_by(assigned_staff_id=staff_id).all()
+    trek_data = []
+    for trek in treks:
+        participants = Booking.query.filter_by(trek_id=trek.id).count()
+        trek_data.append({
+            "id": trek.id,
+            "trek_name": trek.trek_name,
+            "location": trek.location,
+            "difficulty": trek.difficulty,
+            "duration": trek.duration,
+            "available_slots": trek.available_slots,
+            "status": trek.status,
+            "participants": participants
+        })
+    return jsonify(trek_data), 200
+
+@auth_bp.route("/api/staff/trek/<int:trek_id>", methods=["PUT"])
+@jwt_required()
+@role_required("Staff")
+def update_staff_trek(trek_id):
+    user = User.query.get(get_jwt_identity())
+    if not user or not user.staff_profile:
+        return jsonify({"message": "Staff profile not found"}), 404
+    trek = Trek.query.get(trek_id)
+    if not trek:
+        return jsonify({"message": "Trek not found"}), 404
+    if trek.assigned_staff_id != user.staff_profile.id:
+        return jsonify({"message": "You cannot update this trek"}), 403
+    data = request.json
+    trek.available_slots = data.get("available_slots", trek.available_slots)
+    trek.status = data.get("status", trek.status)
+    db.session.commit()
+    return jsonify({"message": "Trek updated successfully"}), 200
+
+@auth_bp.route("/api/staff/trek/<int:trek_id>/participants", methods=["GET"])
+@jwt_required()
+@role_required("Staff")
+def get_trek_participants(trek_id):
+    user = User.query.get(get_jwt_identity())
+    if not user or not user.staff_profile:
+        return jsonify({"message": "Staff profile not found"}), 404
+    trek = Trek.query.get(trek_id)
+    if not trek:
+        return jsonify({"message": "Trek not found"}), 404
+    if trek.assigned_staff_id != user.staff_profile.id:
+        return jsonify({"message": "You cannot view this trek participants"}), 403
+    bookings = Booking.query.filter_by(trek_id=trek_id).all()
+    participants = []
+    for booking in bookings:
+        participants.append({
+            "booking_id": booking.id,
+            "user_id": booking.user.id,
+            "username": booking.user.username,
+            "email": booking.user.email,
+            "booking_status": booking.booking_status,
+            "payment_status": booking.payment_status
+        })
     return jsonify({
-        "username": user.username,
-        "total_bookings": total_bookings,
-        "message": "Welcome Trekker"
+        "trek_name": trek.trek_name,
+        "participants": participants
     }), 200
+
+@auth_bp.route("/api/staff/trek/<int:trek_id>/complete", methods=["PUT"])
+@jwt_required()
+@role_required("Staff")
+def complete_trek(trek_id):
+    user = User.query.get(get_jwt_identity())
+    trek = Trek.query.get(trek_id)
+    if not trek:
+        return jsonify({"message": "Trek not found"}), 404
+    if trek.assigned_staff_id != user.staff_profile.id:
+        return jsonify({"message": "Unauthorized"}), 403
+    trek.status = "Completed"
+    bookings = Booking.query.filter_by(trek_id=trek_id).all()
+    for booking in bookings:
+        booking.booking_status = "Completed"
+    db.session.commit()
+    return jsonify({"message": "Trek completed successfully"}), 200

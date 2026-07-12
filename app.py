@@ -60,6 +60,14 @@ def view_report():
 def staff_dashboard():
     return render_template("staff_dashboard.html")
 
+@app.route("/staff/treks")
+def manage_staff_treks_page():
+    return render_template("manage_assigned_treks.html")
+ 
+@app.route("/staff/trek/<int:trek_id>/participants")
+def staff_participants_page(trek_id):
+    return render_template("trek_participants.html")
+    
 @app.route("/user")
 def user_dashboard():
     return render_template("user_dashboard.html")
