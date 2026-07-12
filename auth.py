@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
-
+from cache import cache
 from decorators import role_required
 from models import Booking, User, db, Trek, StaffProfile, TrekStatistics
 from datetime import datetime
@@ -49,9 +49,11 @@ def login():
 
 
 @auth_bp.route("/api/admin/dashboard", methods=["GET"])
+@cache.cached(timeout=60)
 @jwt_required()
 @role_required("Admin")
 def admin_dashboard():
+    print("Database Hit:", datetime.now())
     user_count = User.query.filter_by(role="Trekker").count()
     staff_count = User.query.filter_by(role="Staff").count()
     trek_count = Trek.query.count()
@@ -85,11 +87,13 @@ def add_staff():
     )
     db.session.add(staff_profile)
     db.session.commit()
+    cache.clear()
     return jsonify({
         "message": "Staff added successfully"
     }), 201
 
 @auth_bp.route("/api/admin/staff/<int:staff_id>/deactivate", methods=["PUT"])
+@cache.cached(timeout=60)
 @jwt_required()
 @role_required("Admin")
 def deactivate_staff(staff_id):
@@ -100,6 +104,7 @@ def deactivate_staff(staff_id):
     if staff.staff_profile:
         staff.staff_profile.status = "Inactive"
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Staff deactivated successfully"}), 200
 
 @auth_bp.route("/api/admin/treks", methods=["POST"])
@@ -123,10 +128,12 @@ def add_trek():
     )
     db.session.add(trek)
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek added successfully"}), 201
 
 
 @auth_bp.route("/api/admin/treks", methods=["GET"])
+@cache.cached(timeout=60)
 @jwt_required()
 @role_required("Admin")
 def get_all_treks():
@@ -169,6 +176,7 @@ def update_trek(trek_id):
     trek.start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date() if data.get("start_date") else None
     trek.end_date = datetime.strptime(data["end_date"], "%Y-%m-%d").date() if data.get("end_date") else None
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek updated successfully"}), 200
 
 @auth_bp.route("/api/admin/trek/<int:trek_id>", methods=["DELETE"])
@@ -180,6 +188,7 @@ def delete_trek(trek_id):
         return jsonify({"message": "Trek not found"}), 404
     db.session.delete(trek)
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek deleted successfully"}), 200
 
 
@@ -229,6 +238,7 @@ def deactivate_user(user_id):
         return jsonify({"message": "Only trekker users can be deactivated from this page"}), 400
     user.is_active = False
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "User deactivated successfully"}), 200
 
 
@@ -270,6 +280,7 @@ def get_all_staffs():
     return jsonify(staff_list), 200
 
 @auth_bp.route("/api/staff/dashboard", methods=["GET"])
+@cache.cached(timeout=60)
 @jwt_required()
 @role_required("Staff")
 def staff_dashboard():
@@ -375,6 +386,7 @@ def complete_trek(trek_id):
     for booking in bookings:
         booking.booking_status = "Completed"
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek completed successfully"}), 200
 
 @auth_bp.route("/api/user/dashboard", methods=["GET"])
@@ -393,6 +405,7 @@ def user_dashboard():
 
 
 @auth_bp.route("/api/user/treks", methods=["GET"])
+@cache.cached(timeout=60)
 @jwt_required()
 @role_required("Trekker")
 def get_available_treks():
@@ -444,6 +457,7 @@ def book_trek(trek_id):
     db.session.add(booking)
     trek.available_slots -= 1
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek booked successfully"}), 201
 
 @auth_bp.route("/api/user/bookings", methods=["GET"])
@@ -487,6 +501,7 @@ def update_profile():
     user.username = data["username"]
     user.email = data["email"]
     db.session.commit()
+    cache.clear()
     return jsonify({
         "message": "Profile updated successfully"
     })

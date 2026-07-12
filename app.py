@@ -1,16 +1,22 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_file
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from auth import auth_bp
 from config import Config
 from models import create_admin, db
-from flask import send_file
+from cache import cache
 
 app = Flask(__name__)
 
 app.config.from_object(Config)
 
+app.config["CACHE_TYPE"] = "RedisCache"
+app.config["CACHE_REDIS_HOST"] = "localhost"
+app.config["CACHE_REDIS_PORT"] = 6379
+app.config["CACHE_DEFAULT_TIMEOUT"] = 60
+
 db.init_app(app)
+cache.init_app(app)
 JWTManager(app)
 CORS(app)
 
@@ -55,7 +61,7 @@ def admin_history_page():
 @app.route("/admin/report/view")
 def view_report():
     return send_file("reports/monthly_report.html")
-    
+
 @app.route("/staff")
 def staff_dashboard():
     return render_template("staff_dashboard.html")
@@ -63,11 +69,11 @@ def staff_dashboard():
 @app.route("/staff/treks")
 def manage_staff_treks_page():
     return render_template("manage_assigned_treks.html")
- 
+
 @app.route("/staff/trek/<int:trek_id>/participants")
 def staff_participants_page(trek_id):
     return render_template("trek_participants.html")
-    
+
 @app.route("/user")
 def user_dashboard():
     return render_template("user_dashboard.html")
@@ -83,6 +89,6 @@ def my_bookings_page():
 @app.route("/user/profile")
 def user_profile():
     return render_template("user_profile.html")
-    
+
 if __name__ == "__main__":
     app.run(debug=True)
