@@ -1,6 +1,7 @@
 from flask import Flask, render_template, send_file
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from extensions import mail
 from auth import auth_bp
 from config import Config
 from models import create_admin, db
@@ -17,6 +18,7 @@ app.config["CACHE_DEFAULT_TIMEOUT"] = 60
 
 db.init_app(app)
 cache.init_app(app)
+mail.init_app(app)
 JWTManager(app)
 CORS(app)
 

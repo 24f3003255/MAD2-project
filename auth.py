@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 from cache import cache
@@ -6,7 +6,7 @@ from decorators import role_required
 from models import Booking, User, db, Trek, StaffProfile, TrekStatistics
 from datetime import datetime
 import os
-
+from tasks import generate_monthly_report, export_booking_history
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -278,6 +278,30 @@ def get_all_staffs():
             "is_active": staff.is_active
         })
     return jsonify(staff_list), 200
+
+@auth_bp.route("/api/admin/report", methods=["POST"])
+@jwt_required()
+@role_required("Admin")
+def create_report():
+
+    task = generate_monthly_report.delay()
+
+    return jsonify({
+        "message": "Report generation started",
+        "task_id": task.id
+    })
+
+@auth_bp.route("/api/admin/report/download", methods=["GET"])
+@jwt_required()
+@role_required("Admin")
+def download_report():
+    filename = "reports/monthly_report.html"
+    if not os.path.exists(filename):
+        return jsonify({"message": "Report not found"}), 404
+    return send_file(
+        filename,
+        mimetype="text/html"
+    )
 
 @auth_bp.route("/api/staff/dashboard", methods=["GET"])
 @cache.cached(timeout=60)

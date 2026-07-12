@@ -4,3 +4,5 @@ env/
 .env
 instance/
 __pycache__/
+exports/
+celerybeat-schedule

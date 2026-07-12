@@ -32,17 +32,6 @@ createApp({
             this.total_staff = result.total_staff
             this.total_bookings = result.total_bookings
         },
-        async testReminder() {
-            const token = localStorage.getItem("token")
-            const response = await fetch("/api/admin/test-reminder", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            })
-            const result = await response.json()
-            alert(result.message)
-        },
         async printReport() {
             const token = localStorage.getItem("token")
             const response = await fetch("/api/admin/report", {
@@ -53,6 +42,22 @@ createApp({
             })
             const result = await response.json()
             alert(result.message)
+        },
+        async viewReport() {
+
+            const token = localStorage.getItem("token")
+
+            const response = await fetch("/api/admin/report/download", {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+
+            const html = await response.text()
+
+            const reportWindow = window.open()
+
+            reportWindow.document.write(html)
         },
         goToAddStaff() {
             window.location = "/admin/add-staff"
