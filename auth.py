@@ -229,7 +229,6 @@ def deactivate_user(user_id):
         return jsonify({"message": "Only trekker users can be deactivated from this page"}), 400
     user.is_active = False
     db.session.commit()
-    cache.clear()
     return jsonify({"message": "User deactivated successfully"}), 200
 
 
@@ -492,6 +491,25 @@ def update_profile():
         "message": "Profile updated successfully"
     })
 
+
+@auth_bp.route("/api/user/booking/<int:booking_id>/cancel", methods=["PUT"])
+@jwt_required()
+@role_required("Trekker")
+def cancel_booking(booking_id):
+    user_id = get_jwt_identity()
+    booking = Booking.query.filter_by(
+        id=booking_id,
+        user_id=user_id
+    ).first()
+    if not booking:
+        return jsonify({"message":"Booking not found"}),404
+    if booking.booking_status == "Cancelled":
+        return jsonify({"message":"Already cancelled"}),400
+    booking.booking_status = "Cancelled"
+    booking.trek.available_slots += 1
+    db.session.commit()
+    cache.clear()
+    return jsonify({"message":"Booking cancelled"})
 
 @auth_bp.route("/api/user/export-history", methods=["POST"])
 @jwt_required()
