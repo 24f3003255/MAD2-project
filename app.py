@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from auth import auth_bp
 from config import Config
 from models import create_admin, db
+from flask import send_file
 
 app = Flask(__name__)
 
@@ -27,6 +28,34 @@ def home():
 def admin_dashboard():
     return render_template("admin_dashboard.html")
 
+@app.route("/admin/add-staff")
+def add_staff_page():
+    return render_template("add_staff.html")
+
+@app.route("/admin/staffs")
+def manage_staff_page():
+    return render_template("manage_staff.html")
+
+@app.route("/admin/add-trek")
+def add_trek_page():
+    return render_template("add_trek.html")
+
+@app.route("/admin/manage-treks")
+def manage_treks_page():
+    return render_template("manage_treks.html")
+
+@app.route("/admin/manage-users")
+def manage_users_page():
+    return render_template("manage_users.html")
+
+@app.route("/admin/history")
+def admin_history_page():
+    return render_template("admin_history.html")
+
+@app.route("/admin/report/view")
+def view_report():
+    return send_file("reports/monthly_report.html")
+    
 @app.route("/staff")
 def staff_dashboard():
     return render_template("staff_dashboard.html")

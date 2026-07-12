@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Treks</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+<div id="app">
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand">Trekking Management</span>
+            <div>
+                <button class="btn btn-light btn-sm me-2" @click="goToDashboard">Dashboard</button>
+                <button class="btn btn-success btn-sm me-2" @click="goToAddTrek">Add Trek</button>
+                <button class="btn btn-danger btn-sm" @click="logout">Logout</button>
+            </div>
+        </div>
+    </nav>
+    <div class="container py-4">
+        <h3 class="mb-3">Manage Treks</h3>
+        <input
+            type="text"
+            class="form-control mb-3"
+            placeholder="Search trek..."
+            v-model="searchQuery"
+            @input="searchTreks"
+        >
+        <table class="table table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Difficulty</th>
+                    <th>Days</th>
+                    <th>Slots</th>
+                    <th>Staff</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="trek in treks" :key="trek.id">
+                    <td v-text="trek.id"></td>
+                    <td v-text="trek.trek_name"></td>
+                    <td v-text="trek.location"></td>
+                    <td v-text="trek.difficulty"></td>
+                    <td v-text="trek.duration"></td>
+                    <td v-text="trek.available_slots"></td>
+                    <td v-text="trek.assigned_staff_name"></td>
+                    <td v-text="trek.status"></td>
+                    <td>
+                        <button class="btn btn-warning btn-sm me-1" @click="openEditModal(trek)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @click="deleteTrek(trek.id)">Delete</button>
+                    </td>
+                </tr>
+                <tr v-if="treks.length==0">
+                    <td colspan="9" class="text-center">No Treks Available</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="modal fade" id="editTrekModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Edit Trek</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Trek Name</label>
+                        <input class="form-control" v-model="editTrekData.trek_name">
+                    </div>
+                    <div class="mb-3">
+                        <label>Location</label>
+                        <input class="form-control" v-model="editTrekData.location">
+                    </div>
+                    <div class="mb-3">
+                        <label>Difficulty</label>
+                        <select class="form-select" v-model="editTrekData.difficulty">
+                            <option>Easy</option>
+                            <option>Moderate</option>
+                            <option>Hard</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Duration</label>
+                        <input type="number" class="form-control" v-model="editTrekData.duration">
+                    </div>
+                    <div class="mb-3">
+                        <label>Available Slots</label>
+                        <input type="number" class="form-control" v-model="editTrekData.available_slots">
+                    </div>
+                    <div class="mb-3">
+                        <label>Assign Staff</label>
+                        <select class="form-select" v-model="editTrekData.assigned_staff_id">
+                            <option value="">Select Staff</option>
+                            <option
+                                v-for="staff in staffOptions"
+                                :key="staff.staff_profile_id"
+                                :value="staff.staff_profile_id"
+                                v-text="staff.username">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Status</label>
+                        <select class="form-select" v-model="editTrekData.status">
+                            <option>Pending</option>
+                            <option>Approved</option>
+                            <option>Open</option>
+                            <option>Closed</option>
+                            <option>Upcoming</option>
+                            <option>Completed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" v-model="editTrekData.start_date">
+                    </div>
+                    <div class="mb-3">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" v-model="editTrekData.end_date">
+                    </div>
+                    <div class="mb-3">
+                        <label>Description</label>
+                        <textarea class="form-control" rows="3" v-model="editTrekData.description"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" @click="updateTrek">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/manage_treks.js"></script>
+</body>
+</html>
