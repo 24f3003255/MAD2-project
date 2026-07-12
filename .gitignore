@@ -1,3 +1,6 @@
 venv/
 env/
 .venv/
+.env
+instance/
+__pycache__/
